@@ -1,0 +1,14 @@
+{
+    "private": true,
+    "dependencies": {
+        "fastify": "^4.24.2"
+    },
+    "devDependencies": {
+        "@types/node": "^18.18.5",
+        "typescript": "^5.2.2"
+    },
+    "scripts": {
+        "build": "tsc -p tsconfig.json",
+        "start": "node ./build/app.js"
+      }
+}
