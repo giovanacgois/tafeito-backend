@@ -9,6 +9,7 @@
     },
     "scripts": {
         "build": "tsc -p tsconfig.json",
-        "start": "node ./build/app.js"
+        "start": "node ./build/app.js",
+        "start-local": "tsc -p tsconfig.json && node ./build/app.js"
       }
 }
