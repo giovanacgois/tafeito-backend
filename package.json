@@ -1,15 +1,19 @@
 {
     "private": true,
     "dependencies": {
-        "fastify": "^4.24.2"
+        "@fastify/static": "^6.11.2",
+        "fastify": "^4.24.2",
+        "fastify-plugin": "^4.5.1",
+        "uuid": "^9.0.1"
     },
     "devDependencies": {
         "@types/node": "^18.18.5",
+        "@types/uuid": "^9.0.6",
         "typescript": "^5.2.2"
     },
     "scripts": {
         "build": "tsc -p tsconfig.json",
         "start": "node ./build/app.js",
         "start-local": "tsc -p tsconfig.json && node ./build/app.js"
-      }
+    }
 }
