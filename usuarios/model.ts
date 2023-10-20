@@ -59,3 +59,8 @@ export async function recuperarLoginDoUsuarioAutenticado(
   }
   return usuario ;
 }
+
+export async function alterarNome (usuario: Usuario, novoNome: string): Promise<void> {
+  await pausar(100);
+  usuario.nome = novoNome; 
+}

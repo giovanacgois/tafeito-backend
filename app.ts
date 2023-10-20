@@ -7,6 +7,7 @@ import {
   DadosTarefa,
 } from "./tarefas/model";
 import {
+  alterarNome,
   autenticar,
   recuperarLoginDoUsuarioAutenticado,
 } from "./usuarios/model";
@@ -64,7 +65,7 @@ app.get("/tarefas", async (req, resp) => {
   }));
 });
 
-app.post("/usuarios/login", async (req, resp) => {
+app.post("/eu/login", async (req, resp) => {
   const { login, senha } = req.body as { login: string; senha: string };
   const idAutenticacao = await autenticar(login, senha);
   resp.status(201);
@@ -76,6 +77,23 @@ app.get("/tarefas", async (req, resp) => {
   const id = Number(idStr);
   const tarefa = await carregarTarefaPorId(req.usuario, id);
   return { descricao: tarefa.descricao };
+});
+
+app.get("/eu", async (req, resp) => {
+  if (req.usuario === null) {
+    throw new UsuarioNaoAutenticado();
+  }
+  return { nome: req.usuario?.nome };
+});
+
+app.put("/eu/nome", async (req, resp) => {
+  if (req.usuario === null) {
+    throw new UsuarioNaoAutenticado();
+  }
+
+  const { nome } = req.body as { nome: string };
+  await alterarNome(req.usuario, nome);
+  resp.status(204);
 });
 
 async function main() {
