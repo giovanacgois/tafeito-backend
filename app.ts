@@ -6,11 +6,7 @@ import {
   carregarTarefas,
   DadosTarefa,
 } from "./tarefas/model";
-import {
-  alterarNome,
-  autenticar,
-  recuperarLoginDoUsuarioAutenticado,
-} from "./usuarios/model";
+import { recuperarLoginDoUsuarioAutenticado } from "./usuarios/model";
 import {
   AcessoNegado,
   DadosDeEntradaInvalidos,
@@ -18,14 +14,21 @@ import {
   UsuarioNaoAutenticado,
 } from "./shared/erros";
 
+import euRouter from "./eu/router";
+import tarefasRouter from "./tarefas/router";
+
 const app = fastify({ logger: true });
 
 app.decorateRequest("usuario", null);
+
 app.removeContentTypeParser("text/plain");
 
 app.setNotFoundHandler((req, resp) => {
   resp.status(404).send("Recurso não encontrado");
 });
+
+app.register(euRouter, { prefix: "/eu" });
+app.register(tarefasRouter, { prefix: "/tarefas" });
 
 app.setErrorHandler((erro, req, resp) => {
   if (erro instanceof DadosDeEntradaInvalidos) {
@@ -48,53 +51,7 @@ app.addHook("preParsing", async (req, resp) => {
   }
 });
 
-app.post("/tarefas", async (req, resp) => {
-  const dados = req.body as DadosTarefa;
-  const idTarefa = await cadastrarTarefa(req.usuario, dados);
-  resp.status(201);
-  console.log(req.usuario);
-  return { id: idTarefa };
-});
 
-app.get("/tarefas", async (req, resp) => {
-  const { termo } = req.query as { termo?: string };
-  const tarefas = await carregarTarefas(req.usuario, termo);
-  return tarefas.map((tarefa) => ({
-    id: tarefa.id,
-    descricao: tarefa.descricao,
-  }));
-});
-
-app.post("/eu/login", async (req, resp) => {
-  const { login, senha } = req.body as { login: string; senha: string };
-  const idAutenticacao = await autenticar(login, senha);
-  resp.status(201);
-  return { token: idAutenticacao };
-});
-
-app.get("/tarefas", async (req, resp) => {
-  const { id: idStr } = req.params as { id: string };
-  const id = Number(idStr);
-  const tarefa = await carregarTarefaPorId(req.usuario, id);
-  return { descricao: tarefa.descricao };
-});
-
-app.get("/eu", async (req, resp) => {
-  if (req.usuario === null) {
-    throw new UsuarioNaoAutenticado();
-  }
-  return { nome: req.usuario?.nome };
-});
-
-app.put("/eu/nome", async (req, resp) => {
-  if (req.usuario === null) {
-    throw new UsuarioNaoAutenticado();
-  }
-
-  const { nome } = req.body as { nome: string };
-  await alterarNome(req.usuario, nome);
-  resp.status(204);
-});
 
 async function main() {
   try {
