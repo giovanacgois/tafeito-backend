@@ -15,3 +15,9 @@ export class TokenInvalido extends Error {
     super("Token inválido");
   }
 }
+
+export class AcessoNegado extends Error {
+  constructor() {
+    super("Acesso negado");
+  }
+}

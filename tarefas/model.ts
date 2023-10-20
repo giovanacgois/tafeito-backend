@@ -1,6 +1,10 @@
 import util from "util";
 import { Usuario } from "../usuarios/model";
-import { UsuarioNaoAutenticado } from "../shared/erros";
+import {
+  AcessoNegado,
+  DadosDeEntradaInvalidos,
+  UsuarioNaoAutenticado,
+} from "../shared/erros";
 
 interface Tarefa {
   id: IdTarefa;
@@ -13,6 +17,10 @@ export type DadosTarefa = {
 };
 
 type IdTarefa = number;
+
+type Identificavel = {
+  id: number;
+};
 
 const tarefas: Tarefa[] = [];
 const pausar = util.promisify(setTimeout);
@@ -38,12 +46,37 @@ export async function cadastrarTarefa(
 export async function carregarTarefas(
   usuario: Usuario | null,
   termo?: string
-): Promise<Tarefa[]> {
+): Promise<(DadosTarefa & Identificavel)[]> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
   await pausar(100);
   return tarefas
     .filter((tarefa) => tarefa.loginDoUsuario === usuario.login)
-    .filter((tarefa) => !termo || tarefa.descricao.includes(termo));
+    .filter((tarefa) => !termo || tarefa.descricao.includes(termo))
+    .map((tarefa) => ({
+      id: tarefa.id,
+      descricao: tarefa.descricao,
+    }));
+}
+
+export async function carregarTarefaPorId(
+  usuario: Usuario | null,
+  id: IdTarefa
+): Promise<DadosTarefa> {
+  if (usuario == null) {
+    throw new UsuarioNaoAutenticado();
+  }
+  await pausar(100);
+  const tarefa = tarefas.find((tarefa) => tarefa.id === id);
+  if (tarefa === undefined) {
+    throw new DadosDeEntradaInvalidos(
+      "NAO_ENCONTRADO",
+      "Tarefa não encontrada"
+    );
+  }
+  if (tarefa.loginDoUsuario !== usuario.login) {
+    throw new AcessoNegado();
+  }
+  return { descricao: tarefa.descricao };
 }

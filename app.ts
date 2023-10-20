@@ -1,11 +1,17 @@
 import fastify from "fastify";
 
-import { cadastrarTarefa, carregarTarefas, DadosTarefa } from "./tarefas/model";
+import {
+  cadastrarTarefa,
+  carregarTarefaPorId,
+  carregarTarefas,
+  DadosTarefa,
+} from "./tarefas/model";
 import {
   autenticar,
   recuperarLoginDoUsuarioAutenticado,
 } from "./usuarios/model";
 import {
+  AcessoNegado,
   DadosDeEntradaInvalidos,
   TokenInvalido,
   UsuarioNaoAutenticado,
@@ -27,6 +33,8 @@ app.setErrorHandler((erro, req, resp) => {
     resp.status(401).send({ codigo: "TOKEN_INVALIDO" });
   } else if (erro instanceof UsuarioNaoAutenticado) {
     resp.status(401).send({ codigo: "USUARIO_NAO_AUTENTICADO" });
+  } else if (erro instanceof AcessoNegado) {
+    resp.status(403).send({ mensagem: erro.message });
   } else resp.send(erro);
 });
 
@@ -49,7 +57,11 @@ app.post("/tarefas", async (req, resp) => {
 
 app.get("/tarefas", async (req, resp) => {
   const { termo } = req.query as { termo?: string };
-  return await carregarTarefas(req.usuario, termo);
+  const tarefas = await carregarTarefas(req.usuario, termo);
+  return tarefas.map((tarefa) => ({
+    id: tarefa.id,
+    descricao: tarefa.descricao,
+  }));
 });
 
 app.post("/usuarios/login", async (req, resp) => {
@@ -57,6 +69,13 @@ app.post("/usuarios/login", async (req, resp) => {
   const idAutenticacao = await autenticar(login, senha);
   resp.status(201);
   return { token: idAutenticacao };
+});
+
+app.get("/tarefas", async (req, resp) => {
+  const { id: idStr } = req.params as { id: string };
+  const id = Number(idStr);
+  const tarefa = await carregarTarefaPorId(req.usuario, id);
+  return { descricao: tarefa.descricao };
 });
 
 async function main() {
