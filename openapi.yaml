@@ -1,0 +1,49 @@
+openapi: 3.1.0
+
+info:
+  title: TaFeito
+  version: "1.0.0"
+
+servers:
+  - url: "http://localhost:3000"
+
+components: 
+  securitySchemes: 
+    token:
+      type: http
+      scheme: Bearer
+      bearerFormat: uuid
+security:
+  - token: []
+
+paths: 
+  /usuarios/login:
+    post:
+      summary: Autenticar usuário
+      requestBody: 
+        content: 
+          application/json: 
+            schema: 
+              type: object
+              properties: 
+                login: 
+                  type: string
+                senha: 
+                  type: string
+              required: 
+                - ["login", "senha"]
+      responses: 
+        200:
+          description: Autenticado com sucesso
+          content:
+            application/json: 
+              schema: 
+                type: object
+                properties: 
+                  token:
+                    type: string
+                    format: uuid
+                required: 
+                  - ["token"]
+
+                   
