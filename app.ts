@@ -27,7 +27,7 @@ app.setNotFoundHandler((req, resp) => {
   resp.status(404).send("Recurso não encontrado");
 });
 
-app.register(euRouter, { prefix: "/eu" });
+app.register(euRouter, { prefix: "/usuarios" });
 app.register(tarefasRouter, { prefix: "/tarefas" });
 
 app.setErrorHandler((erro, req, resp) => {
