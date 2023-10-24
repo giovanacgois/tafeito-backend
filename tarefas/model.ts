@@ -1,4 +1,3 @@
-import util from "util";
 import { Usuario } from "../usuarios/model";
 import {
   AcessoNegado,

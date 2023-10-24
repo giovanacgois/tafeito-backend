@@ -4,10 +4,12 @@
         "@fastify/static": "^6.11.2",
         "fastify": "^4.24.2",
         "fastify-plugin": "^4.5.1",
+        "pg": "^8.11.3",
         "uuid": "^9.0.1"
     },
     "devDependencies": {
         "@types/node": "^18.18.5",
+        "@types/pg": "^8.10.7",
         "@types/uuid": "^9.0.6",
         "typescript": "^5.2.2"
     },
