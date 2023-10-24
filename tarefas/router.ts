@@ -2,7 +2,7 @@ import { FastifyInstance, FastifySchema } from "fastify";
 import {
   DadosTarefa,
   cadastrarTarefa,
-  carregarTarefas,
+  consultarTarefas,
   carregarTarefaPorId,
   concluirTarefa,
   reabrirTarefa,
@@ -71,7 +71,7 @@ export default async (app: FastifyInstance) => {
 
   app.get("/", { schema: getSchema }, async (req, resp) => {
     const { termo } = req.query as { termo?: string };
-    const tarefas = await carregarTarefas(req.usuario, termo);
+    const tarefas = await consultarTarefas(req.usuario, termo);
     return tarefas.map((tarefa) => ({
       id: tarefa.id,
       descricao: tarefa.descricao,

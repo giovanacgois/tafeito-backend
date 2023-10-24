@@ -5,6 +5,7 @@ import {
   DadosDeEntradaInvalidos,
   UsuarioNaoAutenticado,
 } from "../shared/erros";
+import { readFile, writeFile } from "fs/promises";
 
 interface Tarefa {
   id: IdTarefa;
@@ -14,7 +15,7 @@ interface Tarefa {
 }
 
 export type DadosTarefa = {
-  descricao: string,
+  descricao: string;
   dataConclusao: Date | null;
 };
 
@@ -24,10 +25,18 @@ type Identificavel = {
   id: number;
 };
 
-const tarefas: Tarefa[] = [];
-const pausar = util.promisify(setTimeout);
-let sequencial: IdTarefa = 0;
+type Dados = {
+  sequencial: number;
+  tarefas: Tarefa[];
+};
+async function carregarTarefas(): Promise<Dados> {
+  const dados = await readFile("dados.json", "utf-8");
+  return JSON.parse(dados);
+}
 
+async function armazenarTarefa(dados: Dados): Promise<void> {
+  await writeFile("dados.json", JSON.stringify(dados), "utf-8");
+}
 
 export async function cadastrarTarefa(
   usuario: Usuario | null,
@@ -36,33 +45,37 @@ export async function cadastrarTarefa(
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
-  await pausar(100);
+  let { sequencial, tarefas } = await carregarTarefas();
   sequencial++;
   const idTarefa = sequencial;
-  tarefas.push({
+  const tarefa = {
     id: sequencial,
     ...dados,
     loginDoUsuario: usuario.login,
-    dataConclusao: null
-  });
-
+    dataConclusao: null,
+  };
+  tarefas.push(tarefa);
+  await armazenarTarefa({ sequencial, tarefas });
+  console.log("cadastrou", tarefa);
   return idTarefa;
 }
-export async function carregarTarefas(
+
+export async function consultarTarefas(
   usuario: Usuario | null,
   termo?: string
 ): Promise<(DadosTarefa & Identificavel)[]> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
-  await pausar(100);
+
+  const { tarefas } = await carregarTarefas();
   return tarefas
     .filter((tarefa) => tarefa.loginDoUsuario === usuario.login)
     .filter((tarefa) => !termo || tarefa.descricao.includes(termo))
     .map((tarefa) => ({
       id: tarefa.id,
       descricao: tarefa.descricao,
-      dataConclusao: tarefa.dataConclusao
+      dataConclusao: tarefa.dataConclusao,
     }));
 }
 
@@ -73,7 +86,7 @@ export async function carregarTarefaPorId(
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
-  await pausar(100);
+  const { tarefas } = await carregarTarefas();
   const tarefa = tarefas.find((tarefa) => tarefa.id === id);
   if (tarefa === undefined) {
     throw new DadosDeEntradaInvalidos(
@@ -94,7 +107,7 @@ export async function concluirTarefa(
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
-  await pausar(100);
+  const {sequencial, tarefas } = await carregarTarefas();
   const tarefa = tarefas.find((tarefa) => tarefa.id === id);
   if (tarefa === undefined) {
     throw new DadosDeEntradaInvalidos(
@@ -107,6 +120,7 @@ export async function concluirTarefa(
   }
 
   tarefa.dataConclusao = new Date();
+  await armazenarTarefa({ sequencial, tarefas });
 }
 
 export async function reabrirTarefa(
@@ -116,7 +130,7 @@ export async function reabrirTarefa(
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
-  await pausar(100);
+  const {sequencial, tarefas } = await carregarTarefas();
   const tarefa = tarefas.find((tarefa) => tarefa.id === id);
   if (tarefa === undefined) {
     throw new DadosDeEntradaInvalidos(
@@ -129,4 +143,5 @@ export async function reabrirTarefa(
   }
 
   tarefa.dataConclusao = null;
+  await armazenarTarefa({ sequencial, tarefas });
 }
