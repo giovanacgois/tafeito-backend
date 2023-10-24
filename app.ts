@@ -1,11 +1,5 @@
 import fastify from "fastify";
 
-import {
-  cadastrarTarefa,
-  carregarTarefaPorId,
-  carregarTarefas,
-  DadosTarefa,
-} from "./tarefas/model";
 import { recuperarLoginDoUsuarioAutenticado } from "./usuarios/model";
 import {
   AcessoNegado,
@@ -50,8 +44,6 @@ app.addHook("preParsing", async (req, resp) => {
     req.usuario = usuario;
   }
 });
-
-
 
 async function main() {
   try {

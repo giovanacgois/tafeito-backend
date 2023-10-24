@@ -10,10 +10,12 @@ interface Tarefa {
   id: IdTarefa;
   descricao: string;
   loginDoUsuario: string;
+  dataConclusao: Date | null;
 }
 
 export type DadosTarefa = {
-  descricao: string;
+  descricao: string,
+  dataConclusao: Date | null;
 };
 
 type IdTarefa = number;
@@ -25,6 +27,7 @@ type Identificavel = {
 const tarefas: Tarefa[] = [];
 const pausar = util.promisify(setTimeout);
 let sequencial: IdTarefa = 0;
+
 
 export async function cadastrarTarefa(
   usuario: Usuario | null,
@@ -40,7 +43,9 @@ export async function cadastrarTarefa(
     id: sequencial,
     ...dados,
     loginDoUsuario: usuario.login,
+    dataConclusao: null
   });
+
   return idTarefa;
 }
 export async function carregarTarefas(
@@ -57,6 +62,7 @@ export async function carregarTarefas(
     .map((tarefa) => ({
       id: tarefa.id,
       descricao: tarefa.descricao,
+      dataConclusao: tarefa.dataConclusao
     }));
 }
 
@@ -78,5 +84,49 @@ export async function carregarTarefaPorId(
   if (tarefa.loginDoUsuario !== usuario.login) {
     throw new AcessoNegado();
   }
-  return { descricao: tarefa.descricao };
+  return { descricao: tarefa.descricao, dataConclusao: tarefa.dataConclusao };
+}
+
+export async function concluirTarefa(
+  usuario: Usuario | null,
+  id: IdTarefa
+): Promise<void> {
+  if (usuario == null) {
+    throw new UsuarioNaoAutenticado();
+  }
+  await pausar(100);
+  const tarefa = tarefas.find((tarefa) => tarefa.id === id);
+  if (tarefa === undefined) {
+    throw new DadosDeEntradaInvalidos(
+      "NAO_ENCONTRADO",
+      "Tarefa não encontrada"
+    );
+  }
+  if (tarefa.loginDoUsuario !== usuario.login) {
+    throw new AcessoNegado();
+  }
+
+  tarefa.dataConclusao = new Date();
+}
+
+export async function reabrirTarefa(
+  usuario: Usuario | null,
+  id: IdTarefa
+): Promise<void> {
+  if (usuario == null) {
+    throw new UsuarioNaoAutenticado();
+  }
+  await pausar(100);
+  const tarefa = tarefas.find((tarefa) => tarefa.id === id);
+  if (tarefa === undefined) {
+    throw new DadosDeEntradaInvalidos(
+      "NAO_ENCONTRADO",
+      "Tarefa não encontrada"
+    );
+  }
+  if (tarefa.loginDoUsuario !== usuario.login) {
+    throw new AcessoNegado();
+  }
+
+  tarefa.dataConclusao = null;
 }
