@@ -7,8 +7,26 @@ info:
 servers:
   - url: "http://localhost:3000"
 
-components: 
-  securitySchemes: 
+components:
+  responses:
+    RequisicaoInvalida:
+      description: O formato não foi reconhecido
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+            required:
+              - ["token"]
+    BugOuServidorIndisponivel:
+      description: O servidor encontrou um bug ou está fora do ar.
+    NaoAutenticadoOuTokenInvalido:
+      description: Você deve incluir um token de autenticação válido para efetuar essa chamada.
+    NaoAutorizado:
+      description: Você está autenticado mas não possui acesso ao recurso solicitado.
+  securitySchemes:
     token:
       type: http
       scheme: Bearer
@@ -16,34 +34,67 @@ components:
 security:
   - token: []
 
-paths: 
+paths:
   /usuarios/login:
     post:
       summary: Autenticar usuário
-      requestBody: 
-        content: 
-          application/json: 
-            schema: 
+      requestBody:
+        content:
+          application/json:
+            schema:
               type: object
-              properties: 
-                login: 
+              properties:
+                login:
                   type: string
-                senha: 
+                senha:
                   type: string
-              required: 
+              required:
                 - ["login", "senha"]
-      responses: 
+      responses:
         200:
           description: Autenticado com sucesso
           content:
-            application/json: 
-              schema: 
+            application/json:
+              schema:
                 type: object
-                properties: 
+                properties:
                   token:
                     type: string
                     format: uuid
-                required: 
-                  - ["token"]
+                required:
+                  - ['token']
+        400: 
+          $ref: '#/components/responses/RequisicaoInvalida'
 
-                   
+        500:
+          $ref: '#/components/responses/BugOuServidorIndisponivel'
+          
+  /tarefas:
+    get:
+      summary: Carregar tarefas do usuário logado.
+      parameters: 
+        - name: termo
+          in: query
+          schema:
+            type: string
+      responses: 
+        200:
+          description: Lista de tarefas.
+          content: 
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    descricao:
+                      type: string
+                  required: [ 'descricao' ]
+        400:
+          $ref: '#/components/responses/RequisicaoInvalida'
+        401:
+          $ref: '#/components/responses/NaoAutenticadoOuTokenInvalido'
+        403:
+          $ref: '#/components/responses/NaoAutorizado'
+        500:
+          $ref: '#/components/responses/BugOuServidorIndisponivel'
