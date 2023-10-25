@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { UsuarioNaoAutenticado } from "../shared/erros";
-import { autenticar, alterarNome } from "../usuarios/model";
+import { autenticar, alterarNome } from "./model";
 
 export default async (app: FastifyInstance) => {
   app.post("/login", async (req, resp) => {

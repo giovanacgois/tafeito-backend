@@ -8,7 +8,7 @@ import {
   UsuarioNaoAutenticado,
 } from "./shared/erros";
 
-import euRouter from "./eu/router";
+import euRouter from "./usuarios/router";
 import tarefasRouter from "./tarefas/router";
 
 const app = fastify({ logger: true });
