@@ -1,7 +1,7 @@
 import util from "util";
 import { v4 as uuidv4 } from "uuid";
 import { DadosDeEntradaInvalidos, TokenInvalido } from "../shared/erros";
-import { conectar } from "../db";
+import { conectar } from "../shared/db";
 
 const pausar = util.promisify(setTimeout);
 
