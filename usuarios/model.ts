@@ -2,44 +2,30 @@ import util from "util";
 import { v4 as uuidv4 } from "uuid";
 import { DadosDeEntradaInvalidos, TokenInvalido } from "../shared/erros";
 import knex from "../shared/queryBuilder";
+import bcrypt from "bcrypt";
+
 const pausar = util.promisify(setTimeout);
 
 type UUIDString = string;
 type IdAutenticacao = UUIDString;
 type Login = string;
+type Autenticacao = {
+  id_usuario: number;
+  id: IdAutenticacao;
+};
 
 export interface Usuario {
+  id: number;
   login: Login;
   nome: string;
   senha: string; //temporário
   admin: boolean;
 }
 
-const usuarios: {
-  [key: Login]: Usuario | undefined;
-} = {
-  clara: {
-    login: "clara",
-    nome: "clara",
-    senha: "123456",
-    admin: true
-  },
-  pedro: {
-    login: "pedro",
-    nome: "pedro",
-    senha: "234567",
-    admin: false
-  },
-};
-
-const autenticacoes: { [key: IdAutenticacao]: Usuario } = {
-  "98017dc1-e90f-43af-8348-43d459f00c29": usuarios["clara"] as Usuario,
-  "d12026f4-471d-4863-9a2c-d7efc8835947": usuarios["pedro"] as Usuario,
-};
-
 declare module "knex/types/tables" {
   interface Tables {
     usuarios: Usuario;
+    autenticacao: Autenticacao;
   }
 }
 export async function autenticar(
@@ -47,11 +33,11 @@ export async function autenticar(
   senha: string
 ): Promise<IdAutenticacao> {
   const usuario = await knex("usuarios")
-    .select("login", "senha", "nome", "admin")
+    .select("id", "login", "senha", "nome", "admin")
     .where("login", login)
     .first();
 
-  if (usuario === undefined || usuario.senha !== senha) {
+  if (usuario === undefined || !(await bcrypt.compare(senha, usuario.senha))) {
     console.log(usuario);
     console.log(usuario?.senha);
     throw new DadosDeEntradaInvalidos(
@@ -60,15 +46,16 @@ export async function autenticar(
     );
   }
   const id = uuidv4();
-  autenticacoes[id] = { ...usuario };
+  await knex("autenticacoes").insert({ id, id_usuario: usuario.id });
   return id;
 }
 
-export async function recuperarLoginDoUsuarioAutenticado(
-  token: IdAutenticacao
-): Promise<Usuario> {
-  await pausar(100);
-  const usuario = autenticacoes[token];
+export async function recuperarLoginDoUsuarioAutenticado(token: IdAutenticacao): Promise<Usuario> {
+  const usuario = await knex("autenticacoes")
+    .join("usuarios", "usuarios.id", "autenticacoes.id_usuario")
+    .select<Usuario>("usuarios.id", "login", "senha", "nome", "admin")
+    .where("autenticacoes.id", token)
+    .first();
   if (usuario === undefined) {
     throw new TokenInvalido();
   }

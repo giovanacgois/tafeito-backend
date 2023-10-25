@@ -37,7 +37,7 @@ app.setErrorHandler((erro, req, resp) => {
 });
 
 app.addHook("preParsing", async (req, resp) => {
-  const { authorization } = req.headers;
+  const { authorization } = req.headers as { authorization?: string };
   if (authorization !== undefined) {
     const token = authorization.replace("Bearer ", "");
     const usuario = await recuperarLoginDoUsuarioAutenticado(token);
