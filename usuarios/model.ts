@@ -1,10 +1,7 @@
 import util from "util";
 import { v4 as uuidv4 } from "uuid";
 import { DadosDeEntradaInvalidos, TokenInvalido } from "../shared/erros";
-import sequelize from "../shared/orm";
-
-import sequelizeLib, { Model } from "sequelize";
-
+import knex from "../shared/queryBuilder";
 const pausar = util.promisify(setTimeout);
 
 type UUIDString = string;
@@ -15,6 +12,7 @@ export interface Usuario {
   login: Login;
   nome: string;
   senha: string; //temporário
+  admin: boolean;
 }
 
 const usuarios: {
@@ -24,11 +22,13 @@ const usuarios: {
     login: "clara",
     nome: "clara",
     senha: "123456",
+    admin: true
   },
   pedro: {
     login: "pedro",
     nome: "pedro",
     senha: "234567",
+    admin: false
   },
 };
 
@@ -37,34 +37,23 @@ const autenticacoes: { [key: IdAutenticacao]: Usuario } = {
   "d12026f4-471d-4863-9a2c-d7efc8835947": usuarios["pedro"] as Usuario,
 };
 
-class UsuarioORM extends Model {
-  public id!: number;
-  public nome!: string;
-  public login!: string;
-  public senha!: string;
-  public admin!: string;
-}
-
-UsuarioORM.init(
-  {
-    nome: sequelizeLib.STRING,
-    login: sequelizeLib.STRING,
-    admin: sequelizeLib.BOOLEAN,
-    senha: sequelizeLib.STRING,
-  },
-  {
-    sequelize,
-    tableName: "usuarios",
+declare module "knex/types/tables" {
+  interface Tables {
+    usuarios: Usuario;
   }
-);
-
+}
 export async function autenticar(
   login: Login,
   senha: string
 ): Promise<IdAutenticacao> {
-  const usuario = await UsuarioORM.findOne({ where: { login } });
+  const usuario = await knex("usuarios")
+    .select("login", "senha", "nome", "admin")
+    .where("login", login)
+    .first();
 
-  if (usuario === null || usuario.senha !== senha) {
+  if (usuario === undefined || usuario.senha !== senha) {
+    console.log(usuario);
+    console.log(usuario?.senha);
     throw new DadosDeEntradaInvalidos(
       "LOGIN_OU_SENHA_INVALIDOS",
       "Login ou senha inválidos"
