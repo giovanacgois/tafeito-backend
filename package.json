@@ -5,6 +5,7 @@
         "fastify": "^4.24.2",
         "fastify-plugin": "^4.5.1",
         "pg": "^8.11.3",
+        "sequelize": "^6.33.0",
         "uuid": "^9.0.1"
     },
     "devDependencies": {

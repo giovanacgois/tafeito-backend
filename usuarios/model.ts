@@ -1,7 +1,9 @@
 import util from "util";
 import { v4 as uuidv4 } from "uuid";
 import { DadosDeEntradaInvalidos, TokenInvalido } from "../shared/erros";
-import { conectar } from "../shared/db";
+import sequelize from "../shared/orm";
+
+import sequelizeLib, { Model } from "sequelize";
 
 const pausar = util.promisify(setTimeout);
 
@@ -35,30 +37,42 @@ const autenticacoes: { [key: IdAutenticacao]: Usuario } = {
   "d12026f4-471d-4863-9a2c-d7efc8835947": usuarios["pedro"] as Usuario,
 };
 
+class UsuarioORM extends Model {
+  public id!: number;
+  public nome!: string;
+  public login!: string;
+  public senha!: string;
+  public admin!: string;
+}
+
+UsuarioORM.init(
+  {
+    nome: sequelizeLib.STRING,
+    login: sequelizeLib.STRING,
+    admin: sequelizeLib.BOOLEAN,
+    senha: sequelizeLib.STRING,
+  },
+  {
+    sequelize,
+    tableName: "usuarios",
+  }
+);
+
 export async function autenticar(
   login: Login,
   senha: string
 ): Promise<IdAutenticacao> {
-  const conexao = await conectar();
+  const usuario = await UsuarioORM.findOne({ where: { login } });
 
-  try {
-    const res = await conexao.query(
-      "select nome, senha, admin from usuarios where login = $1",
-      [login]
+  if (usuario === null || usuario.senha !== senha) {
+    throw new DadosDeEntradaInvalidos(
+      "LOGIN_OU_SENHA_INVALIDOS",
+      "Login ou senha inválidos"
     );
-    const row = res.rows[0];
-    if (row === undefined || row.senha !== senha) {
-      throw new DadosDeEntradaInvalidos(
-        "LOGIN_OU_SENHA_INVALIDOS",
-        "Login ou senha inválidos"
-      );
-    }
-    const id = uuidv4();
-    autenticacoes[id] = { login, ...row };
-    return id;
-  } finally {
-    await conexao.end();
   }
+  const id = uuidv4();
+  autenticacoes[id] = { ...usuario };
+  return id;
 }
 
 export async function recuperarLoginDoUsuarioAutenticado(

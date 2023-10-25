@@ -55,7 +55,6 @@ export async function cadastrarTarefa(
   };
   tarefas.push(tarefa);
   await armazenarTarefa({ sequencial, tarefas });
-  console.log("cadastrou", tarefa);
   return idTarefa;
 }
 
