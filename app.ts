@@ -10,6 +10,7 @@ import {
 
 import euRouter from "./usuarios/router";
 import tarefasRouter from "./tarefas/router";
+import categoriasRouter from "./categorias/router";
 
 const app = fastify({ logger: true });
 
@@ -23,6 +24,7 @@ app.setNotFoundHandler((req, resp) => {
 
 app.register(euRouter, { prefix: "/usuarios" });
 app.register(tarefasRouter, { prefix: "/tarefas" });
+app.register(categoriasRouter, { prefix: "/categorias" });
 
 app.setErrorHandler((erro, req, resp) => {
   if (erro instanceof DadosDeEntradaInvalidos) {
