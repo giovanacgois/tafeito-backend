@@ -32,21 +32,20 @@ export async function autenticar(
   login: Login,
   senha: string
 ): Promise<IdAutenticacao> {
+
   const usuario = await knex("usuarios")
     .select("id", "login", "senha", "nome", "admin")
     .where("login", login)
     .first();
 
-  if (usuario === undefined || !(await bcrypt.compare(senha, usuario.senha))) {
-    console.log(usuario);
-    console.log(usuario?.senha);
+  if (usuario === undefined || (await senhaInvalida(senha, usuario.senha))) {
     throw new DadosDeEntradaInvalidos(
       "LOGIN_OU_SENHA_INVALIDOS",
       "Login ou senha inválidos"
     );
   }
   const id = uuidv4();
-  await knex("autenticacoes").insert({ id, id_usuario: usuario.id });
+  await knex("autenticacoes").insert({id_usuario: usuario.id, id });
   return id;
 }
 
@@ -69,3 +68,8 @@ export async function alterarNome(
   await pausar(100);
   usuario.nome = novoNome;
 }
+async function senhaInvalida(senha: string, hash: string): Promise<boolean> {
+  const hashCompativel = await bcrypt.compare(senha, hash);
+  return !hashCompativel;
+}
+

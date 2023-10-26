@@ -3,6 +3,7 @@ import { UsuarioNaoAutenticado } from "../shared/erros";
 import { autenticar, alterarNome } from "./model";
 
 export default async (app: FastifyInstance) => {
+  
   app.post("/login", async (req, resp) => {
     const { login, senha } = req.body as { login: string; senha: string };
     const idAutenticacao = await autenticar(login, senha);
