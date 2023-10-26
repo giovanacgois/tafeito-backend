@@ -6,7 +6,8 @@ import {
   carregarTarefaPorId,
   concluirTarefa,
   reabrirTarefa,
-  alterarTarefa
+  alterarTarefa,
+  excluirTarefa
 } from "./model";
 
 export default async (app: FastifyInstance) => {
@@ -98,6 +99,13 @@ export default async (app: FastifyInstance) => {
     resp.status(204);
   });
 
+  app.delete("/:id", async (req, resp) => {
+    const { id } = req.params as { id: string };
+    const idTarefa = Number(id);
+    await excluirTarefa(req.usuario, idTarefa);
+    resp.status(204);
+  });
+
   app.post("/:id/concluir", async (req, resp) => {
     const { id } = req.params as { id: string };
     const idTarefa = Number(id);
@@ -111,4 +119,5 @@ export default async (app: FastifyInstance) => {
     await reabrirTarefa(req.usuario, idTarefa);
     resp.status(204);
   });
+
 };

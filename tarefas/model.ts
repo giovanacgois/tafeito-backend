@@ -153,6 +153,18 @@ export async function alterarTarefa(
   }
 }
 
+export async function excluirTarefa(
+  usuario: Usuario | null,
+  id: IdTarefa
+): Promise<void> {
+  if (usuario == null) {
+    throw new UsuarioNaoAutenticado();
+  }
+
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
+  await knex("tarefas").where("id", id).delete();
+}
+
 async function asseguraExistenciaDaTarefaEAcessoDeEdicao(
   usuario: Usuario,
   id: IdTarefa
