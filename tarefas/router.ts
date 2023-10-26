@@ -6,6 +6,7 @@ import {
   carregarTarefaPorId,
   concluirTarefa,
   reabrirTarefa,
+  alterarTarefa
 } from "./model";
 
 export default async (app: FastifyInstance) => {
@@ -14,6 +15,7 @@ export default async (app: FastifyInstance) => {
       type: "object",
       properties: {
         descricao: { type: "string" },
+        id_categoria: { type: "number" },
       },
       required: ["descricao"],
       additionalProperties: false,
@@ -73,9 +75,8 @@ export default async (app: FastifyInstance) => {
     const { termo } = req.query as { termo?: string };
     const tarefas = await consultarTarefas(req.usuario, termo);
     return tarefas.map((tarefa) => ({
-      id: tarefa.id,
       descricao: tarefa.descricao,
-      concluida: tarefa.dataConclusao !== null,
+      concluida: tarefa.data_conclusao !== null,
     }));
   });
 
@@ -85,8 +86,16 @@ export default async (app: FastifyInstance) => {
     const tarefa = await carregarTarefaPorId(req.usuario, id);
     return {
       descricao: tarefa.descricao,
-      concluida: tarefa.dataConclusao !== null,
+      concluida: tarefa.data_conclusao !== null,
     };
+  });
+
+  app.patch("/:id", { schema: getSingleSchema }, async (req, resp) => {
+    const { id: idStr } = req.params as { id: string };
+    const idTarefa = Number(idStr);
+    const alteracoes = req.body as Partial<DadosTarefa>;
+    await alterarTarefa(req.usuario, idTarefa, alteracoes);
+    resp.status(204);
   });
 
   app.post("/:id/concluir", async (req, resp) => {

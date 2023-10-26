@@ -2,33 +2,34 @@ import { Usuario } from "../usuarios/model";
 import {
   AcessoNegado,
   DadosDeEntradaInvalidos,
+  DadosOuEstadoInvalido,
   UsuarioNaoAutenticado,
 } from "../shared/erros";
 import { readFile, writeFile } from "fs/promises";
+import knex from "../shared/queryBuilder";
+import { totalmem } from "os";
 
-interface Tarefa {
-  id: IdTarefa;
+export interface DadosTarefa {
   descricao: string;
-  loginDoUsuario: string;
-  dataConclusao: Date | null;
+  id_categoria: number;
+  data_conclusao: Date | null;
 }
-
-export type DadosTarefa = {
-  descricao: string;
-  dataConclusao: Date | null;
-};
 
 type IdTarefa = number;
 
-type Identificavel = {
-  id: number;
+type Tarefa = DadosTarefa & {
+  id: IdTarefa;
+  id_usuario: number;
+  data_conclusao: Date | null;
 };
 
-type Dados = {
-  sequencial: number;
-  tarefas: Tarefa[];
-};
-async function carregarTarefas(): Promise<Dados> {
+declare module "knex/types/tables" {
+  interface Tables {
+    tarefas: Tarefa;
+  }
+}
+
+/* async function carregarTarefas(): Promise<Dados> {
   const dados = await readFile("dados.json", "utf-8");
   return JSON.parse(dados);
 }
@@ -36,7 +37,7 @@ async function carregarTarefas(): Promise<Dados> {
 async function armazenarTarefa(dados: Dados): Promise<void> {
   await writeFile("dados.json", JSON.stringify(dados), "utf-8");
 }
-
+ */
 export async function cadastrarTarefa(
   usuario: Usuario | null,
   dados: DadosTarefa
@@ -44,37 +45,43 @@ export async function cadastrarTarefa(
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
-  let { sequencial, tarefas } = await carregarTarefas();
-  sequencial++;
-  const idTarefa = sequencial;
-  const tarefa = {
-    id: sequencial,
-    ...dados,
-    loginDoUsuario: usuario.login,
-    dataConclusao: null,
-  };
-  tarefas.push(tarefa);
-  await armazenarTarefa({ sequencial, tarefas });
-  return idTarefa;
-}
 
+  const res = await knex("tarefas")
+    .insert({
+      ...dados,
+      id_usuario: usuario.id,
+    })
+    .returning<Pick<Tarefa, "id">[]>("id");
+  if (res.length === 0) {
+    throw new Error("Erro ao cadastrar a tarefa. res === undefined");
+  }
+  return res[0].id;
+}
 export async function consultarTarefas(
   usuario: Usuario | null,
   termo?: string
-): Promise<(DadosTarefa & Identificavel)[]> {
+): Promise<DadosTarefa[]> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
 
-  const { tarefas } = await carregarTarefas();
-  return tarefas
-    .filter((tarefa) => tarefa.loginDoUsuario === usuario.login)
-    .filter((tarefa) => !termo || tarefa.descricao.includes(termo))
-    .map((tarefa) => ({
-      id: tarefa.id,
-      descricao: tarefa.descricao,
-      dataConclusao: tarefa.dataConclusao,
-    }));
+  let query = knex("tarefas").select(
+    "id",
+    "descricao",
+    "id_categoria",
+    "id_usuario",
+    "data_conclusao"
+  );
+
+  if (!usuario.admin) {
+    query = query.where("id_usuario", usuario.id);
+  }
+
+  if (termo !== undefined) {
+    query = query.where("descricao", "ilike", `%${termo}%`);
+  }
+
+  return await query;
 }
 
 export async function carregarTarefaPorId(
@@ -84,18 +91,23 @@ export async function carregarTarefaPorId(
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
-  const { tarefas } = await carregarTarefas();
-  const tarefa = tarefas.find((tarefa) => tarefa.id === id);
+
+  const tarefa = await knex("tarefas")
+    .select("id", "descricao", "id_categoria", "id_usuario", "data_conclusao")
+    .where("id", id)
+    .first();
+
   if (tarefa === undefined) {
     throw new DadosDeEntradaInvalidos(
       "NAO_ENCONTRADO",
       "Tarefa não encontrada"
     );
   }
-  if (tarefa.loginDoUsuario !== usuario.login) {
+
+  if (!usuario.admin && tarefa.id_usuario !== usuario.id) {
     throw new AcessoNegado();
   }
-  return { descricao: tarefa.descricao, dataConclusao: tarefa.dataConclusao };
+  return tarefa;
 }
 
 export async function concluirTarefa(
@@ -105,20 +117,9 @@ export async function concluirTarefa(
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
-  const {sequencial, tarefas } = await carregarTarefas();
-  const tarefa = tarefas.find((tarefa) => tarefa.id === id);
-  if (tarefa === undefined) {
-    throw new DadosDeEntradaInvalidos(
-      "NAO_ENCONTRADO",
-      "Tarefa não encontrada"
-    );
-  }
-  if (tarefa.loginDoUsuario !== usuario.login) {
-    throw new AcessoNegado();
-  }
 
-  tarefa.dataConclusao = new Date();
-  await armazenarTarefa({ sequencial, tarefas });
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
+  await knex("tarefas").where("id", id).update({ data_conclusao: new Date() });
 }
 
 export async function reabrirTarefa(
@@ -128,18 +129,44 @@ export async function reabrirTarefa(
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
-  const {sequencial, tarefas } = await carregarTarefas();
-  const tarefa = tarefas.find((tarefa) => tarefa.id === id);
-  if (tarefa === undefined) {
-    throw new DadosDeEntradaInvalidos(
-      "NAO_ENCONTRADO",
-      "Tarefa não encontrada"
-    );
+
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
+  await knex("tarefas").where("id", id).update({ data_conclusao: null });
+}
+
+export async function alterarTarefa(
+  usuario: Usuario | null,
+  id: IdTarefa,
+  alteracoes: Partial<DadosTarefa>
+): Promise<void> {
+  if (usuario === null) {
+    throw new UsuarioNaoAutenticado();
   }
-  if (tarefa.loginDoUsuario !== usuario.login) {
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
+  if (Object.keys(alteracoes).length > 0) {
+    await knex("tarefas")
+      .update({
+        descricao: alteracoes.descricao,
+        id_categoria: alteracoes.id_categoria,
+      })
+      .where("id", id);
+  }
+}
+
+async function asseguraExistenciaDaTarefaEAcessoDeEdicao(
+  usuario: Usuario,
+  id: IdTarefa
+): Promise<void> {
+  const res = await knex("tarefas")
+    .select("id_usuario")
+    .where("id", id)
+    .first();
+  if (res === undefined) {
+    throw new DadosOuEstadoInvalido("Tarefa não encontrada", {
+      codigo: "TAREFA_NAO_ENCONTRADA",
+    });
+  }
+  if (!usuario.admin && usuario.id !== res.id_usuario) {
     throw new AcessoNegado();
   }
-
-  tarefa.dataConclusao = null;
-  await armazenarTarefa({ sequencial, tarefas });
 }
