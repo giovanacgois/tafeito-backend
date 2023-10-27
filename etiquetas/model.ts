@@ -1,5 +1,4 @@
 import { Knex } from "knex";
-import knex from "../shared/queryBuilder";
 
 type FatorRGB = number; // 0-255
 type Cor = [FatorRGB, FatorRGB, FatorRGB];
@@ -18,8 +17,9 @@ declare module "knex/types/tables" {
 
 export async function cadastrarEtiquetaSeNecessario(
   descricao: string,
+  uow: Knex
 ): Promise<number> {
-  const res = await knex("etiquetas")
+  const res = await uow("etiquetas")
     .select("id")
     .where("descricao", descricao)
     .first();
@@ -29,7 +29,7 @@ export async function cadastrarEtiquetaSeNecessario(
   if (res !== undefined) {
     id = res.id;
   } else {
-    const respostaInsert = await knex("etiquetas")
+    const respostaInsert = await uow("etiquetas")
       .insert({ descricao, cor: gerarCorAleatoria() })
       .returning<{ id: number }[]>("id");
     id = respostaInsert[0].id;

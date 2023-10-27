@@ -5,9 +5,8 @@ import {
   DadosOuEstadoInvalido,
   UsuarioNaoAutenticado,
 } from "../shared/erros";
-import knex from "../shared/queryBuilder";
-import { totalmem } from "os";
 import { cadastrarEtiquetaSeNecessario } from "../etiquetas/model";
+import { Knex } from "knex";
 
 export interface DadosTarefa {
   descricao: string;
@@ -31,13 +30,14 @@ declare module "knex/types/tables" {
 
 export async function cadastrarTarefa(
   usuario: Usuario | null,
-  dados: DadosTarefa
+  dados: DadosTarefa,
+  uow: Knex
 ): Promise<IdTarefa> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
 
-  const res = await knex("tarefas")
+  const res = await uow("tarefas")
     .insert({
       ...dados,
       id_usuario: usuario.id,
@@ -50,13 +50,14 @@ export async function cadastrarTarefa(
 }
 export async function consultarTarefas(
   usuario: Usuario | null,
+  uow: Knex,
   termo?: string
 ): Promise<DadosTarefa[]> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
 
-  let query = knex("tarefas").select(
+  let query = uow("tarefas").select(
     "id",
     "descricao",
     "id_categoria",
@@ -77,13 +78,14 @@ export async function consultarTarefas(
 
 export async function carregarTarefaPorId(
   usuario: Usuario | null,
-  id: IdTarefa
+  id: IdTarefa,
+  uow: Knex
 ): Promise<DadosTarefa> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
 
-  const tarefa = await knex("tarefas")
+  const tarefa = await uow("tarefas")
     .select("id", "descricao", "id_categoria", "id_usuario", "data_conclusao")
     .where("id", id)
     .first();
@@ -103,39 +105,42 @@ export async function carregarTarefaPorId(
 
 export async function concluirTarefa(
   usuario: Usuario | null,
-  id: IdTarefa
+  id: IdTarefa,
+  uow: Knex
 ): Promise<void> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
 
-  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
-  await knex("tarefas").where("id", id).update({ data_conclusao: new Date() });
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id, uow);
+  await uow("tarefas").where("id", id).update({ data_conclusao: new Date() });
 }
 
 export async function reabrirTarefa(
   usuario: Usuario | null,
-  id: IdTarefa
+  id: IdTarefa,
+  uow: Knex
 ): Promise<void> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
 
-  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
-  await knex("tarefas").where("id", id).update({ data_conclusao: null });
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id, uow);
+  await uow("tarefas").where("id", id).update({ data_conclusao: null });
 }
 
 export async function alterarTarefa(
   usuario: Usuario | null,
   id: IdTarefa,
-  alteracoes: Partial<DadosTarefa>
+  alteracoes: Partial<DadosTarefa>,
+  uow: Knex
 ): Promise<void> {
   if (usuario === null) {
     throw new UsuarioNaoAutenticado();
   }
-  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id, uow);
   if (Object.keys(alteracoes).length > 0) {
-    await knex("tarefas")
+    await uow("tarefas")
       .update({
         descricao: alteracoes.descricao,
         id_categoria: alteracoes.id_categoria,
@@ -146,24 +151,23 @@ export async function alterarTarefa(
 
 export async function excluirTarefa(
   usuario: Usuario | null,
-  id: IdTarefa
+  id: IdTarefa,
+  uow: Knex
 ): Promise<void> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
 
-  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
-  await knex("tarefas").where("id", id).delete();
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id, uow);
+  await uow("tarefas").where("id", id).delete();
 }
 
 async function asseguraExistenciaDaTarefaEAcessoDeEdicao(
   usuario: Usuario,
-  id: IdTarefa
+  id: IdTarefa,
+  uow: Knex
 ): Promise<void> {
-  const res = await knex("tarefas")
-    .select("id_usuario")
-    .where("id", id)
-    .first();
+  const res = await uow("tarefas").select("id_usuario").where("id", id).first();
   if (res === undefined) {
     throw new DadosOuEstadoInvalido("Tarefa não encontrada", {
       codigo: "TAREFA_NAO_ENCONTRADA",
@@ -177,15 +181,16 @@ async function asseguraExistenciaDaTarefaEAcessoDeEdicao(
 export async function vincularEtiquetaNaTarefa(
   usuario: Usuario | null,
   id: IdTarefa,
-  etiqueta: string
+  etiqueta: string,
+  uow: Knex
 ): Promise<void> {
   if (usuario === null) {
     throw new UsuarioNaoAutenticado();
   }
-  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
-  const idEtiqueta = await cadastrarEtiquetaSeNecessario(etiqueta);
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id, uow);
+  const idEtiqueta = await cadastrarEtiquetaSeNecessario(etiqueta, uow);
 
-  await knex("tarefa_etiqueta")
+  await uow("tarefa_etiqueta")
     .insert({
       id_tarefa: id,
       id_etiqueta: idEtiqueta,
@@ -197,15 +202,16 @@ export async function vincularEtiquetaNaTarefa(
 export async function desvincularEtiquetaDaTarefa(
   usuario: Usuario | null,
   id: IdTarefa,
-  etiqueta: string
+  etiqueta: string,
+  uow: Knex
 ): Promise<void> {
   if (usuario === null) {
     throw new UsuarioNaoAutenticado();
   }
-  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
-  const idEtiqueta = await cadastrarEtiquetaSeNecessario(etiqueta);
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id, uow);
+  const idEtiqueta = await cadastrarEtiquetaSeNecessario(etiqueta, uow);
 
-  await knex("tarefa_etiqueta")
+  await uow("tarefa_etiqueta")
     .insert({
       id_tarefa: id,
       id_etiqueta: idEtiqueta,

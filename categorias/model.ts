@@ -1,4 +1,4 @@
-import knex from "../shared/queryBuilder";
+import { Knex } from "knex";
 
 type Categoria = {
   id: number;
@@ -11,6 +11,6 @@ declare module "knex/types/tables" {
   }
 }
 
-export async function buscarCategorias(): Promise<Categoria[]> {
-  return await knex("categorias").select("id", "descricao");
+export async function buscarCategorias(uow: Knex): Promise<Categoria[]> {
+  return await uow("categorias").select("id", "descricao");
 }

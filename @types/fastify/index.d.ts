@@ -1,3 +1,4 @@
+import { Knex } from "knex";
 import { Usuario } from "./usuarios/model.js";
 
 /* necessário para atribuirmos o tipo Usuario à request já que o Fastify não oferece esse suporte nativamente.
@@ -6,5 +7,6 @@ import { Usuario } from "./usuarios/model.js";
 declare module "fastify" {
   interface FastifyRequest {
     usuario: null | Usuario;
+    uow: Knex.Transaction;
   }
 }

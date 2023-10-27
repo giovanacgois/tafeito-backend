@@ -1,17 +1,16 @@
 import { FastifyInstance, FastifySchema } from "fastify";
 import {
   DadosTarefa,
+  alterarTarefa,
   cadastrarTarefa,
-  consultarTarefas,
   carregarTarefaPorId,
   concluirTarefa,
-  reabrirTarefa,
-  alterarTarefa,
-  excluirTarefa,
-  vincularEtiquetaNaTarefa,
+  consultarTarefas,
   desvincularEtiquetaDaTarefa,
+  excluirTarefa,
+  reabrirTarefa,
+  vincularEtiquetaNaTarefa,
 } from "./model";
-import knex from "../shared/queryBuilder";
 
 export default async (app: FastifyInstance) => {
   const postSchema: FastifySchema = {
@@ -70,14 +69,14 @@ export default async (app: FastifyInstance) => {
 
   app.post("/", { schema: postSchema }, async (req, resp) => {
     const dados = req.body as DadosTarefa;
-    const idTarefa = await cadastrarTarefa(req.usuario, dados);
+    const idTarefa = await cadastrarTarefa(req.usuario, dados, req.uow);
     resp.status(201);
     return { id: idTarefa };
   });
 
   app.get("/", { schema: getSchema }, async (req, resp) => {
     const { termo } = req.query as { termo?: string };
-    const tarefas = await consultarTarefas(req.usuario, termo);
+    const tarefas = await consultarTarefas(req.usuario, req.uow, termo);
     return tarefas.map((tarefa) => ({
       descricao: tarefa.descricao,
       concluida: tarefa.data_conclusao !== null,
@@ -87,7 +86,7 @@ export default async (app: FastifyInstance) => {
   app.get("/:id", { schema: getSingleSchema }, async (req, resp) => {
     const { id: idStr } = req.params as { id: string };
     const id = Number(idStr);
-    const tarefa = await carregarTarefaPorId(req.usuario, id);
+    const tarefa = await carregarTarefaPorId(req.usuario, id, req.uow);
     return {
       descricao: tarefa.descricao,
       concluida: tarefa.data_conclusao !== null,
@@ -98,42 +97,42 @@ export default async (app: FastifyInstance) => {
     const { id: idStr } = req.params as { id: string };
     const idTarefa = Number(idStr);
     const alteracoes = req.body as Partial<DadosTarefa>;
-    await alterarTarefa(req.usuario, idTarefa, alteracoes);
+    await alterarTarefa(req.usuario, idTarefa, alteracoes, req.uow);
     resp.status(204);
   });
 
   app.delete("/:id", async (req, resp) => {
     const { id } = req.params as { id: string };
     const idTarefa = Number(id);
-    await excluirTarefa(req.usuario, idTarefa);
+    await excluirTarefa(req.usuario, idTarefa, req.uow);
     resp.status(204);
   });
 
   app.post("/:id/concluir", async (req, resp) => {
     const { id } = req.params as { id: string };
     const idTarefa = Number(id);
-    await concluirTarefa(req.usuario, idTarefa);
+    await concluirTarefa(req.usuario, idTarefa, req.uow);
     resp.status(204);
   });
 
   app.post("/:id/reabrir", async (req, resp) => {
     const { id } = req.params as { id: string };
     const idTarefa = Number(id);
-    await reabrirTarefa(req.usuario, idTarefa);
+    await reabrirTarefa(req.usuario, idTarefa, req.uow);
     resp.status(204);
   });
 
   app.post("/:id/etiquetas/:etiqueta", async (req, resp) => {
     const { id, etiqueta } = req.params as { id: string; etiqueta: string };
     const idTarefa = Number(id);
-    await vincularEtiquetaNaTarefa(req.usuario, idTarefa, etiqueta);
+    await vincularEtiquetaNaTarefa(req.usuario, idTarefa, etiqueta, req.uow);
     resp.status(204);
   });
 
   app.delete("/:id/etiquetas/:etiqueta", async (req, resp) => {
     const { id, etiqueta } = req.params as { id: string; etiqueta: string };
     const idTarefa = Number(id);
-    await desvincularEtiquetaDaTarefa(req.usuario, idTarefa, etiqueta);
+    await desvincularEtiquetaDaTarefa(req.usuario, idTarefa, etiqueta, req.uow);
     resp.status(204);
   });
 };
