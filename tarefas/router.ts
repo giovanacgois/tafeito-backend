@@ -7,8 +7,11 @@ import {
   concluirTarefa,
   reabrirTarefa,
   alterarTarefa,
-  excluirTarefa
+  excluirTarefa,
+  vincularEtiquetaNaTarefa,
+  desvincularEtiquetaDaTarefa,
 } from "./model";
+import knex from "../shared/queryBuilder";
 
 export default async (app: FastifyInstance) => {
   const postSchema: FastifySchema = {
@@ -120,4 +123,17 @@ export default async (app: FastifyInstance) => {
     resp.status(204);
   });
 
+  app.post("/:id/etiquetas/:etiqueta", async (req, resp) => {
+    const { id, etiqueta } = req.params as { id: string; etiqueta: string };
+    const idTarefa = Number(id);
+    await vincularEtiquetaNaTarefa(req.usuario, idTarefa, etiqueta);
+    resp.status(204);
+  });
+
+  app.delete("/:id/etiquetas/:etiqueta", async (req, resp) => {
+    const { id, etiqueta } = req.params as { id: string; etiqueta: string };
+    const idTarefa = Number(id);
+    await desvincularEtiquetaDaTarefa(req.usuario, idTarefa, etiqueta);
+    resp.status(204);
+  });
 };

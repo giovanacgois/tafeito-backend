@@ -5,9 +5,9 @@ import {
   DadosOuEstadoInvalido,
   UsuarioNaoAutenticado,
 } from "../shared/erros";
-import { readFile, writeFile } from "fs/promises";
 import knex from "../shared/queryBuilder";
 import { totalmem } from "os";
+import { cadastrarEtiquetaSeNecessario } from "../etiquetas/model";
 
 export interface DadosTarefa {
   descricao: string;
@@ -29,15 +29,6 @@ declare module "knex/types/tables" {
   }
 }
 
-/* async function carregarTarefas(): Promise<Dados> {
-  const dados = await readFile("dados.json", "utf-8");
-  return JSON.parse(dados);
-}
-
-async function armazenarTarefa(dados: Dados): Promise<void> {
-  await writeFile("dados.json", JSON.stringify(dados), "utf-8");
-}
- */
 export async function cadastrarTarefa(
   usuario: Usuario | null,
   dados: DadosTarefa
@@ -181,4 +172,44 @@ async function asseguraExistenciaDaTarefaEAcessoDeEdicao(
   if (!usuario.admin && usuario.id !== res.id_usuario) {
     throw new AcessoNegado();
   }
+}
+
+export async function vincularEtiquetaNaTarefa(
+  usuario: Usuario | null,
+  id: IdTarefa,
+  etiqueta: string
+): Promise<void> {
+  if (usuario === null) {
+    throw new UsuarioNaoAutenticado();
+  }
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
+  const idEtiqueta = await cadastrarEtiquetaSeNecessario(etiqueta);
+
+  await knex("tarefa_etiqueta")
+    .insert({
+      id_tarefa: id,
+      id_etiqueta: idEtiqueta,
+    })
+    .onConflict(["id_tarefa", "id_etiqueta"])
+    .ignore();
+}
+
+export async function desvincularEtiquetaDaTarefa(
+  usuario: Usuario | null,
+  id: IdTarefa,
+  etiqueta: string
+): Promise<void> {
+  if (usuario === null) {
+    throw new UsuarioNaoAutenticado();
+  }
+  await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id);
+  const idEtiqueta = await cadastrarEtiquetaSeNecessario(etiqueta);
+
+  await knex("tarefa_etiqueta")
+    .insert({
+      id_tarefa: id,
+      id_etiqueta: idEtiqueta,
+    })
+    .onConflict(["id_tarefa", "id_etiqueta"])
+    .ignore();
 }
