@@ -38,6 +38,12 @@ export async function cadastrarEtiquetaSeNecessario(
   return id;
 }
 
+export async function buscarEtiquetas(
+  uow: Knex
+): Promise<Pick<Etiqueta, "descricao" | "cor">[]> {
+  return await uow("etiquetas").select("descricao", "cor");
+}
+
 function gerarCorAleatoria(): Cor {
   const num = Math.round(0xffffff * Math.random());
   const r = num >> 16;
