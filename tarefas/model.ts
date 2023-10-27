@@ -190,6 +190,7 @@ export async function excluirTarefa(
   }
 
   await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id, uow);
+  await uow("tarefa_etiqueta").where("id_tarefa", id).delete();
   await uow("tarefas").where("id", id).delete();
 }
 
