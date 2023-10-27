@@ -61,13 +61,11 @@ app.addHook("preHandler", (req, resp, done) => {
 
 app.addHook("onSend", async (req) => {
   if (req.uow && !req.uow.isCompleted()) {
-    console.log("commit");
     await req.uow.commit();
   }
 });
 
 app.addHook("onError", async (req) => {
-  console.log("rollback");
   await req.uow.rollback();
 });
 

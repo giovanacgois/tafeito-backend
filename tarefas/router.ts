@@ -60,6 +60,7 @@ export default async (app: FastifyInstance) => {
           id: { type: "number" },
           descricao: { type: "string" },
           concluida: { type: "boolean" },
+          etiquetas: { Array: "string" },
         },
         required: ["descricao"],
         additionalProperties: false,
@@ -77,10 +78,7 @@ export default async (app: FastifyInstance) => {
   app.get("/", { schema: getSchema }, async (req, resp) => {
     const { termo } = req.query as { termo?: string };
     const tarefas = await consultarTarefas(req.usuario, req.uow, termo);
-    return tarefas.map((tarefa) => ({
-      descricao: tarefa.descricao,
-      concluida: tarefa.data_conclusao !== null,
-    }));
+    return tarefas;
   });
 
   app.get("/:id", { schema: getSingleSchema }, async (req, resp) => {
@@ -89,7 +87,9 @@ export default async (app: FastifyInstance) => {
     const tarefa = await carregarTarefaPorId(req.usuario, id, req.uow);
     return {
       descricao: tarefa.descricao,
-      concluida: tarefa.data_conclusao !== null,
+      data_conclusao: tarefa.data_conclusao,
+      id_categoria: tarefa.id_categoria,
+      etiquetas: tarefa.etiquetas,
     };
   });
 

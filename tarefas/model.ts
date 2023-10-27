@@ -22,6 +22,10 @@ type Tarefa = DadosTarefa & {
   data_conclusao: Date | null;
 };
 
+type TarefaDetalhada = Tarefa & {
+  etiquetas: string[];
+};
+
 declare module "knex/types/tables" {
   interface Tables {
     tarefas: Tarefa;
@@ -48,11 +52,12 @@ export async function cadastrarTarefa(
   }
   return res[0].id;
 }
+
 export async function consultarTarefas(
   usuario: Usuario | null,
   uow: Knex,
   termo?: string
-): Promise<DadosTarefa[]> {
+): Promise<TarefaDetalhada[]> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
@@ -72,15 +77,32 @@ export async function consultarTarefas(
   if (termo !== undefined) {
     query = query.where("descricao", "ilike", `%${termo}%`);
   }
+  const tarefas = await query;
 
-  return await query;
+  const tarefasDetalhadas: TarefaDetalhada[] = [];
+
+  const idsTarefas = tarefas.map((x) => x.id);
+  const registrosDeEtiqueta = await uow("etiquetas")
+    .select("descricao, tarefa_etiqueta.id_tarefa")
+    .join("tarefa_etiqueta", "etiquetas.id", "tarefa_etiqueta.id_etiqueta")
+    .whereIn("tarefa_etiqueta.id_tarefa", idsTarefas);
+
+  for (const tarefa of tarefas) {
+    tarefasDetalhadas.push({
+      ...tarefa,
+      etiquetas: registrosDeEtiqueta
+        .filter((x) => x.id_tarefa === tarefa.id)
+        .map((etiqueta) => etiqueta.descricao),
+    });
+  }
+  return tarefasDetalhadas;
 }
 
 export async function carregarTarefaPorId(
   usuario: Usuario | null,
   id: IdTarefa,
   uow: Knex
-): Promise<DadosTarefa> {
+): Promise<TarefaDetalhada> {
   if (usuario == null) {
     throw new UsuarioNaoAutenticado();
   }
@@ -100,7 +122,16 @@ export async function carregarTarefaPorId(
   if (!usuario.admin && tarefa.id_usuario !== usuario.id) {
     throw new AcessoNegado();
   }
-  return tarefa;
+
+  const registrosDeEtiqueta = await uow("etiquetas")
+    .select("descricao")
+    .join("tarefa_etiqueta", "etiquetas.id", "tarefa_etiqueta.id_etiqueta")
+    .where("tarefa_etiqueta.id_tarefa", id);
+
+  return {
+    ...tarefa,
+    etiquetas: registrosDeEtiqueta.map((etiqueta) => etiqueta.descricao),
+  };
 }
 
 export async function concluirTarefa(
