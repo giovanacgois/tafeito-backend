@@ -10,6 +10,8 @@ import {
   excluirTarefa,
   reabrirTarefa,
   vincularEtiquetaNaTarefa,
+  planejarTarefasDoProjeto,
+  sugerirProximaTarefa,
 } from "./model";
 
 export default async (app: FastifyInstance) => {
@@ -65,6 +67,16 @@ export default async (app: FastifyInstance) => {
         required: ["descricao"],
         additionalProperties: false,
       },
+    },
+  };
+
+  const planejarProjetoSchema: FastifySchema = {
+    body: {
+      type: "object",
+      properties: {
+        descricao: { type: "string" },
+      },
+      required: ["descricao"],
     },
   };
 
@@ -134,5 +146,27 @@ export default async (app: FastifyInstance) => {
     const idTarefa = Number(id);
     await desvincularEtiquetaDaTarefa(req.usuario, idTarefa, etiqueta, req.uow);
     resp.status(204);
+  });
+
+  app.post(
+    "/planejar-projeto",
+    { schema: planejarProjetoSchema },
+    async (req, resp) => {
+      const { descricao } = req.body as { descricao: string };
+      const sugestoesDeTarefa = await planejarTarefasDoProjeto(
+        descricao,
+        req.chatbot
+      );
+      return sugestoesDeTarefa;
+    }
+  );
+
+  app.post("/sugerir-proxima", async (req, resp) => {
+    const sugestoesDeTarefa = await sugerirProximaTarefa(
+      req.usuario,
+      req.uow,
+      req.chatbot
+    );
+    return { descricao: sugestoesDeTarefa };
   });
 };

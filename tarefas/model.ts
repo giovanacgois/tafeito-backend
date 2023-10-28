@@ -7,6 +7,7 @@ import {
 } from "../shared/erros";
 import { cadastrarEtiquetaSeNecessario } from "../etiquetas/model";
 import { Knex } from "knex";
+import { Chatbot } from "../chatbot/api";
 
 export interface DadosTarefa {
   descricao: string;
@@ -83,7 +84,7 @@ export async function consultarTarefas(
 
   const idsTarefas = tarefas.map((x) => x.id);
   const registrosDeEtiqueta = await uow("etiquetas")
-    .select("descricao, tarefa_etiqueta.id_tarefa")
+    .select("descricao", "tarefa_etiqueta.id_tarefa")
     .join("tarefa_etiqueta", "etiquetas.id", "tarefa_etiqueta.id_etiqueta")
     .whereIn("tarefa_etiqueta.id_tarefa", idsTarefas);
 
@@ -250,4 +251,36 @@ export async function desvincularEtiquetaDaTarefa(
     })
     .onConflict(["id_tarefa", "id_etiqueta"])
     .ignore();
+}
+
+export async function planejarTarefasDoProjeto(
+  descricao: string,
+  chat: Chatbot
+): Promise<string[]> {
+  const resposta = await chat.obterListaDeFrases({
+    contexto: `Tafeito é um sistema de gestão de tarefas individual.  Você é um gerador de tarefas para o Tafeito. Uma tarefa do Tafeito é uma simples frase com no máximo 150 caracteres. Entenda a frase do usuário como o projeto ou objetivo que ele deseja atingir e escreva uma ou mais tarefas para o Tafeito, em formato de array de strings em Javascript.`,
+    entrada: descricao,
+  });
+  return resposta;
+}
+
+export async function sugerirProximaTarefa(
+  usuario: Usuario,
+  uow: Knex,
+  chatbot: Chatbot
+): Promise<string> {
+  const historico = await uow("tarefas")
+    .select("descricao")
+    .where("id_usuario", usuario.id)
+    .orderBy("id", "desc")
+    .limit(10);
+  return await chatbot.obterFraseUnica({
+    contexto: `Tafeito é um sistema de gestão de tarefas (TODO) individual.
+      Você é um gerador de tarefas para o Tafeito. Uma tarefa do Tafeito é uma
+      simples frase com no máximo 150 caracteres. Você vai sugerir a tarefa que 
+      faria mais sentido ser a próxima para este usuário, baseando-se nas seguintes
+      tarefas presentes no seu histórico:
+
+      ${historico.map((tarefa) => tarefa.descricao).join("\n")}`,
+  });
 }

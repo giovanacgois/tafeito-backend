@@ -13,10 +13,13 @@ import tarefasRouter from "./tarefas/router";
 import categoriasRouter from "./categorias/router";
 import etiquetasRouter from "./etiquetas/router";
 import knex from "./shared/queryBuilder";
+import openai from "./chatbot/openai";
 
 const app = fastify({ logger: true });
 
 app.decorateRequest("usuario", null);
+app.decorateRequest("uow", null);
+app.decorateRequest("chatbot", openai);
 
 app.removeContentTypeParser("text/plain");
 
@@ -49,8 +52,6 @@ app.addHook("preParsing", async (req, resp) => {
     req.usuario = usuario;
   }
 });
-
-app.decorateRequest("uow", null);
 
 app.addHook("preHandler", (req, resp, done) => {
   knex.transaction((trx) => {

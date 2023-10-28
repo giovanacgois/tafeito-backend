@@ -3,36 +3,39 @@ import { v4 as uuidv4 } from "uuid";
 import { DadosDeEntradaInvalidos, TokenInvalido } from "../shared/erros";
 import knex from "../shared/queryBuilder";
 import bcrypt from "bcrypt";
-
+import jwt from "jsonwebtoken";
 const pausar = util.promisify(setTimeout);
 
 type UUIDString = string;
 type IdAutenticacao = UUIDString;
 type Login = string;
-type Autenticacao = {
-  id_usuario: number;
-  id: IdAutenticacao;
-};
 
 export interface Usuario {
   id: number;
   login: Login;
   nome: string;
-  senha: string; //temporário
+  senha: string;
   admin: boolean;
 }
 
 declare module "knex/types/tables" {
   interface Tables {
     usuarios: Usuario;
-    autenticacao: Autenticacao;
   }
 }
+
+const JWT_SECRET = (() => {
+  const env = process.env.JWT_SECRET;
+  if (env === undefined || env === "") {
+    throw new Error("Env JWT_SECRET não definida.");
+  }
+  return env;
+})();
+
 export async function autenticar(
   login: Login,
   senha: string
 ): Promise<IdAutenticacao> {
-
   const usuario = await knex("usuarios")
     .select("id", "login", "senha", "nome", "admin")
     .where("login", login)
@@ -44,21 +47,37 @@ export async function autenticar(
       "Login ou senha inválidos"
     );
   }
-  const id = uuidv4();
-  await knex("autenticacoes").insert({id_usuario: usuario.id, id });
-  return id;
+  return jwt.sign(
+    {
+      login,
+      exp:
+        Math.floor(new Date().getTime() / 1000) +
+        10 * 24 * 60 * 60 /* 10 dias */,
+    },
+    JWT_SECRET
+  );
 }
 
-export async function recuperarLoginDoUsuarioAutenticado(token: IdAutenticacao): Promise<Usuario> {
-  const usuario = await knex("autenticacoes")
-    .join("usuarios", "usuarios.id", "autenticacoes.id_usuario")
-    .select<Usuario>("usuarios.id", "login", "senha", "nome", "admin")
-    .where("autenticacoes.id", token)
-    .first();
-  if (usuario === undefined) {
-    throw new TokenInvalido();
+export async function recuperarLoginDoUsuarioAutenticado(
+  token: IdAutenticacao
+): Promise<Usuario> {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
+    const login = payload.login;
+    const usuario = await knex("usuarios")
+      .select("id", "login", "senha", "nome", "admin")
+      .where("login", login)
+      .first();
+    if (usuario === undefined) {
+      throw new TokenInvalido();
+    }
+    return usuario;
+  } catch (err: any) {
+    if (["jwt expired", "invalid signature"].includes(err.message)) {
+      throw new TokenInvalido();
+    }
+    throw err;
   }
-  return usuario;
 }
 
 export async function alterarNome(
@@ -72,4 +91,3 @@ async function senhaInvalida(senha: string, hash: string): Promise<boolean> {
   const hashCompativel = await bcrypt.compare(senha, hash);
   return !hashCompativel;
 }
-
