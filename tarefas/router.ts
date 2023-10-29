@@ -36,24 +36,6 @@ export default async (app: FastifyInstance) => {
     },
   };
 
-  const getSchema: FastifySchema = {
-    response: {
-      200: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            id: { type: "number" },
-            descricao: { type: "string" },
-            concluida: { type: "boolean" },
-          },
-          required: ["descricao"],
-          additionalProperties: false,
-        },
-      },
-    },
-  };
-
   const getSingleSchema: FastifySchema = {
     response: {
       200: {
@@ -87,7 +69,7 @@ export default async (app: FastifyInstance) => {
     return { id: idTarefa };
   });
 
-  app.get("/", { schema: getSchema }, async (req, resp) => {
+  app.get("/", async (req, resp) => {
     const { termo } = req.query as { termo?: string };
     const tarefas = await consultarTarefas(req.usuario, req.uow, termo);
     return tarefas;
