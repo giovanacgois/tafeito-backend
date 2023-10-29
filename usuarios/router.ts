@@ -3,7 +3,6 @@ import { UsuarioNaoAutenticado } from "../shared/erros";
 import { autenticar, alterarNome } from "./model";
 
 export default async (app: FastifyInstance) => {
-  
   app.post("/login", async (req, resp) => {
     const { login, senha } = req.body as { login: string; senha: string };
     const idAutenticacao = await autenticar(login, senha);
@@ -15,7 +14,13 @@ export default async (app: FastifyInstance) => {
     if (req.usuario === null) {
       throw new UsuarioNaoAutenticado();
     }
-    return { nome: req.usuario?.nome };
+    return {
+      usuario: {
+        nome: req.usuario.nome,
+        login: req.usuario.login,
+        admin: req.usuario.admin,
+      },
+    };
   });
 
   app.put("/nome", async (req, resp) => {
