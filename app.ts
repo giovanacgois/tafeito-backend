@@ -14,6 +14,7 @@ import categoriasRouter from "./categorias/router";
 import etiquetasRouter from "./etiquetas/router";
 import knex from "./shared/queryBuilder";
 import openai from "./chatbot/openai";
+import fastifyCors from "@fastify/cors";
 
 const app = fastify({ logger: true });
 
@@ -27,6 +28,7 @@ app.setNotFoundHandler((req, resp) => {
   resp.status(404).send("Recurso não encontrado");
 });
 
+app.register(fastifyCors, { origin: "http://localhost:3001" });
 app.register(euRouter, { prefix: "/usuarios" });
 app.register(tarefasRouter, { prefix: "/tarefas" });
 app.register(categoriasRouter, { prefix: "/categorias" });
