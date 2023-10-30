@@ -50,7 +50,7 @@ const chatbot: Chatbot = {
   async obterListaDeFrases(opcoesDePergunta) {
     return JSON.parse(
       await perguntar(
-        "A saída deve obrigatoriamente ser um vetor de strings formatado em JSON. Os itens devem estar em uma linguagem objetiva, sem nenhum texto adicional, para serem adicionados em uma checklist.",
+        "A saída deve obrigatoriamente ser um vetor de strings formatado em JSON. Os itens devem estar em uma linguagem objetiva, sem nenhum texto adicional e sem marcadores de listagem, para serem adicionados em uma checklist.",
         opcoesDePergunta
       )
     );
@@ -58,7 +58,7 @@ const chatbot: Chatbot = {
 
   async obterFraseUnica(opcoesDePergunta) {
     return await perguntar(
-      "A saída deve obrigatoriamente ser uma única frase, contendo apenas a tarefa, como se fosse um item para uma checklist - deve estar em linguagem prática, sem nenhum texto adicional.",
+      "A saída deve obrigatoriamente ser uma única frase, contendo apenas a tarefa, como se fosse um item para uma checklist - deve estar em linguagem prática, sem nenhum texto adicional e sem marcadores de listagem.",
       opcoesDePergunta
     );
   },
