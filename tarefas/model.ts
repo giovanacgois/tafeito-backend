@@ -242,15 +242,12 @@ export async function desvincularEtiquetaDaTarefa(
     throw new UsuarioNaoAutenticado();
   }
   await asseguraExistenciaDaTarefaEAcessoDeEdicao(usuario, id, uow);
-  const idEtiqueta = await cadastrarEtiquetaSeNecessario(etiqueta, uow);
-
-  await uow("tarefa_etiqueta")
-    .insert({
-      id_tarefa: id,
-      id_etiqueta: idEtiqueta,
-    })
-    .onConflict(["id_tarefa", "id_etiqueta"])
-    .ignore();
+  const idEtiqueta = await buscarIdDaEtiquetaPelaDescricao(etiqueta, uow);
+  await uow("tarefa_etiqueta").delete().where({
+    id_tarefa: id,
+    id_etiqueta: idEtiqueta,
+  });
+  await removerEtiquetaSeObsoleta(idEtiqueta, uow);
 }
 
 export async function planejarTarefasDoProjeto(
@@ -283,4 +280,33 @@ export async function sugerirProximaTarefa(
 
       ${historico.map((tarefa) => tarefa.descricao).join("\n")}`,
   });
+}
+
+export async function buscarIdDaEtiquetaPelaDescricao(
+  descricao: string,
+  uow: Knex
+): Promise<number> {
+  const res = await uow("etiquetas")
+    .select("id")
+    .where("descricao", descricao)
+    .first();
+  if (res === undefined) {
+    throw new DadosOuEstadoInvalido("Etiqueta não encontrada", {
+      codigo: "ETIQUETA_NAO_ENCONTRADA",
+    });
+  }
+  return res.id;
+}
+
+export async function removerEtiquetaSeObsoleta(
+  id: number,
+  uow: Knex
+): Promise<void> {
+  const res = await uow("tarefa_etiqueta")
+    .count("id_tarefa")
+    .where("id_etiqueta", id)
+    .first();
+  if (res === undefined || res.count === "0") {
+    await uow("etiquetas").where("id", id).delete();
+  }
 }
